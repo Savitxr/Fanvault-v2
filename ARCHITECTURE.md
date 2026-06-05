@@ -24,9 +24,9 @@
                           ┌──────────────────────────────────────────────────────────────┐
                           │                  AWS VPC  (10.0.0.0/16)                      │
                           │                                                              │
-                          │  ┌────────────────────────────────────────────────────────┐ │
-                          │  │              PUBLIC SUBNETS (10.0.1.0/24)              │ │
-                          │  │                                                        │ │
+                          │  ┌────────────────────────────────────────────────┐          │
+                          │  │           PUBLIC SUBNETS (10.0.1.0/24)         │          │
+                          │  │                                                │          │
    Users (HTTPS)          │  │   ┌──────────────────────┐    ┌──────────────────┐    │ │
    ─────────────────────► │  │   │  Internet-facing ALB  │    │   NAT Gateway    │    │ │
                           │  │   │  (HTTP→HTTPS redirect │    │  (for private EC2│    │ │
@@ -34,23 +34,24 @@
                           │  │   └──────────┬───────────┘    └──────────────────┘    │ │
                           │  └──────────────┼─────────────────────────────────────────┘ │
                           │                 │
-                          │        ┌────────┴────────┬───────────────────┐
-                          │        │                 │                   │
-                          │  ┌─────▼─────┐     ┌─────▼─────┐       ┌─────▼─────┐
-                          │  │  Frontend │     │ Identity  │       │ Commerce  │
-                          │  │ TargetGrp │     │ TargetGrp │       │ TargetGrp │
-                          │  │    /*     │     │ /api/auth │       │ /api/prod │
-                          │  └─────┬─────┘     └─────┬─────┘       └─────┬─────┘
-                          │        │                 │                   │
-                          │  ┌─────▼─────┐     ┌─────▼─────┐       ┌─────▼─────┐
-                          │  │ FRONTEND  │     │ IDENTITY  │       │ COMMERCE  │
-                          │  │ EC2 ASG   │     │ EC2 ASG   │       │ EC2 ASG   │
-                          │  │ :80       │     │ :3001     │       │ :3002     │
-                          │  └───────────┘     └─────┬─────┘       └─────┬─────┘
-                          │                          │                   │
-                          │                          └─────────┬─────────┘
-                          │                                    │
-                          │  ┌─────────────────────────────────▼──────────────────────┐ │
+                          │        ┌────────▼────────────────────────────────┐
+                          │        │  MONOLITHIC APP SERVER TARGET GROUP     │
+                          │        │  /* -> Monolithic EC2 (Port 80)         │
+                          │        └────────┬────────────────────────────────┘
+                          │                 │
+                          │  ┌──────────────▼─────────────────────────────────────────┐
+                          │  │ MONOLITHIC EC2 INSTANCE (t3.small)                     │
+                          │  │                                                        │
+                          │  │  Nginx Web Server (Port 80)                            │
+                          │  │    ├── /* (Serve React static assets locally)          │
+                          │  │    ├── /api/auth/*, /api/users/*                       │
+                          │  │    │     └── Proxy to Identity Service (Port 3001)     │
+                          │  │    └── /api/products/*, /api/orders/*                  │
+                          │  │          └── Proxy to Commerce Service (Port 3002)     │
+                          │  └──────────────┬─────────────────────────────────────────┘
+                          │                 │
+                          │                 │ (Connection to DB)
+                          │  ┌──────────────▼─────────────────────────────────────────┐ │
                           │  │             ISOLATED DB SUBNETS (10.0.31.0/24)         │ │
                           │  │                                                        │ │
                           │  │   ┌────────────────────────────────────────────────┐  │ │
@@ -67,11 +68,11 @@
 
 | Original Service | Lines of Responsibility | Absorbed Into |
 |---|---|---|
-| `FanVault-authservice` | JWT issue, password hashing, token refresh | `fanvault-user-auth-service` |
-| `FanVault-UserService` | Profile CRUD, addresses, preferences | `fanvault-user-auth-service` |
-| `FanVault-ProductService` | Catalog CRUD, stock, text search | `fanvault-commerce-service` |
-| `FanVault-OrdersService` | Checkout, pricing, order tracking | `fanvault-commerce-service` |
-| `FanVault-frontend` | React SPA, API client | `fanvault-frontend` |
+| `FanVault-authservice` | JWT issue, password hashing, token refresh | `fanvault-user-auth-service` (Monolithic Host) |
+| `FanVault-UserService` | Profile CRUD, addresses, preferences | `fanvault-user-auth-service` (Monolithic Host) |
+| `FanVault-ProductService` | Catalog CRUD, stock, text search | `fanvault-commerce-service` (Monolithic Host) |
+| `FanVault-OrdersService` | Checkout, pricing, order tracking | `fanvault-commerce-service` (Monolithic Host) |
+| `FanVault-frontend` | React SPA, API client | `fanvault-frontend` (Monolithic Host Nginx) |
 | `FanVault-EmailService` | Transactional email | **Omitted entirely** |
 
 **What was removed:**
@@ -249,10 +250,8 @@ Subnet                    CIDR             AZ          Purpose
 ──────────────────────────────────────────────────────────────────────
 public-1a                 10.0.1.0/24      ap-south-1a  ALB, NAT GW
 public-1b                 10.0.2.0/24      ap-south-1b  ALB (HA)
-frontend-private-1a       10.0.11.0/24     ap-south-1a  Frontend EC2
-frontend-private-1b       10.0.12.0/24     ap-south-1b  Frontend EC2 (HA)
-backend-private-1a        10.0.21.0/24     ap-south-1a  Identity + Commerce EC2
-backend-private-1b        10.0.22.0/24     ap-south-1b  Backend EC2 (HA)
+app-private-1a            10.0.11.0/24     ap-south-1a  Monolithic App EC2
+app-private-1b            10.0.12.0/24     ap-south-1b  Monolithic App EC2 (HA)
 db-private-1a             10.0.31.0/24     ap-south-1a  MongoDB primary
 db-private-1b             10.0.32.0/24     ap-south-1b  MongoDB replica (optional)
 ```
@@ -266,15 +265,14 @@ db-private-1b             10.0.32.0/24     ap-south-1b  MongoDB replica (optiona
 │ Security Group           │ Inbound From                │ Port     │ Proto  │
 ├──────────────────────────┼─────────────────────────────┼──────────┼────────┤
 │ fanvault-alb-sg          │ 0.0.0.0/0                   │ 80, 443  │ TCP    │
-│ fanvault-frontend-sg     │ fanvault-alb-sg              │ 80       │ TCP    │
-│ fanvault-backend-sg      │ fanvault-frontend-sg         │ 3001     │ TCP    │
-│ fanvault-backend-sg      │ fanvault-frontend-sg         │ 3002     │ TCP    │
-│ fanvault-db-sg           │ fanvault-backend-sg          │ 27017    │ TCP    │
+│ fanvault-app-sg          │ fanvault-alb-sg              │ 80       │ TCP    │
+│ fanvault-db-sg           │ fanvault-app-sg              │ 27017    │ TCP    │
 │ fanvault-bastion-sg      │ Operator CIDR (restrict!)    │ 22       │ TCP    │
-│ fanvault-backend-sg      │ fanvault-bastion-sg          │ 22       │ TCP    │
+│ fanvault-app-sg          │ fanvault-bastion-sg          │ 22       │ TCP    │
 │ fanvault-db-sg           │ fanvault-bastion-sg          │ 22       │ TCP    │
 └──────────────────────────┴─────────────────────────────┴──────────┴────────┘
 
+Note: Local backend service ports (3001 and 3002) only bind to 127.0.0.1 and do not need to accept external ingress.
 Egress: All security groups allow all outbound (0.0.0.0/0) to enable NAT/npm installs.
         Lock down egress in production if required by policy.
 ```
@@ -290,7 +288,7 @@ Egress: All security groups allow all outbound (0.0.0.0/0) to enable NAT/npm ins
 |---|---|---|---|
 | `db.fanvault.internal` | A | `10.0.31.100` | MongoDB EC2 private IP |
 
-> **Note on App Services:** Previously, we used `auth-svc` and `commerce-svc` private DNS records for Nginx. Since moving to an ALB-direct routing model, these are obsolete. The ALB balances traffic natively using Target Groups connected to Auto Scaling Groups.
+> **Note on App Services:** In this monolithic setup, the local services (Identity Service on :3001 and Commerce Service on :3002) are proxied directly by Nginx on the loopback address. Private DNS records for backend services are not required.
 
 ---
 
@@ -298,9 +296,7 @@ Egress: All security groups allow all outbound (0.0.0.0/0) to enable NAT/npm ins
 
 | Service | Instance Type | vCPU | RAM | Storage | Notes |
 |---|---|---|---|---|---|
-| Frontend (Nginx) | `t3.small` | 2 | 2 GB | 20 GB gp3 | Scales via ASG |
-| Identity Service | `t3.small` | 2 | 2 GB | 20 GB gp3 | Stateless — Scales via ASG |
-| Commerce Service | `t3.small` | 2 | 2 GB | 20 GB gp3 | Stateless — Scales via ASG |
+| Monolithic App Server | `t3.small` | 2 | 2 GB | 30 GB gp3 | Runs Nginx, Auth, and Commerce |
 | MongoDB | `t3.medium` | 2 | 4 GB | 50 GB gp3 | Single instance / Primary DB |
 
 All instances: **Ubuntu 22.04 LTS** (HVM, SSD).
@@ -309,12 +305,12 @@ All instances: **Ubuntu 22.04 LTS** (HVM, SSD).
 
 ## Auto Scaling Strategy
 
-The architecture natively supports AWS Auto Scaling Groups (ASG) to handle high availability and load scaling without manual intervention:
+The architecture supports AWS Auto Scaling Groups (ASG) for the App server:
 
-1. **AMIs:** You create Amazon Machine Images from your fully provisioned EC2 instances. Because systemd is enabled, the processes launch instantly on boot.
-2. **Launch Templates:** You define templates referencing these AMIs and the respective security groups (e.g., `fanvault-backend-sg`).
-3. **ASGs:** Spanning multiple subnets (`backend-private-1a`, `backend-private-1b`), ASGs ensure instances are balanced across Availability Zones.
-4. **Target Groups:** ASGs automatically register new instances directly with the ALB Target Groups (`fanvault-frontend-tg`, `fanvault-identity-tg`, `fanvault-commerce-tg`).
+1. **AMIs:** You create Amazon Machine Images from your fully provisioned EC2 App instance. Because Nginx and systemd services are enabled, the processes launch instantly on boot.
+2. **Launch Templates:** You define templates referencing these AMIs and the respective security group (`fanvault-app-sg`).
+3. **ASGs:** Spanning multiple subnets (`app-private-1a`, `app-private-1b`), ASGs ensure instances are balanced across Availability Zones.
+4. **Target Groups:** ASGs automatically register new instances directly with the ALB Target Group (`fanvault-frontend-tg` on Port 80).
 
 ---
 
