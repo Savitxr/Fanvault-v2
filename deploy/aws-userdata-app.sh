@@ -19,15 +19,20 @@ REPO_URL="https://github.com/Savitxr/Fanvault-Mono.git"
 BRANCH="monolithic"
 
 # Database Connection Details (Point to the DB EC2 instance)
-# REPLACE with your actual database private IP address or private DNS
-DB_HOST="CHANGE_ME_TO_DB_PRIVATE_IP"
+DB_HOST="172.31.25.115"
 DB_NAME="fanvault_db"
 DB_APP_USER="dbuser"
 DB_APP_PASSWORD="CHANGE_ME_STRONG_APP_PASSWORD"
 
 # Secrets (Ensure JWT_SECRET matches between services)
+# Note: If USE_SECRETS_MANAGER is set to true, these keys can be loaded dynamically from the secret payload.
 JWT_SECRET="CHANGE_ME_STRONG_JWT_ACCESS_SECRET"
 JWT_REFRESH_SECRET="CHANGE_ME_STRONG_JWT_REFRESH_SECRET"
+
+# AWS Secrets Manager Configuration
+USE_SECRETS_MANAGER="false"
+AWS_REGION="us-east-1"
+SECRET_ID="production/mongodb"
 
 echo "=================================================="
 echo " Starting Monolithic App Server Provisioning"
@@ -38,7 +43,7 @@ echo "[INFO] Updating package list..."
 apt-get update -y
 
 echo "[INFO] Installing system dependencies (Git, Nginx, Rsync, Curl, Netcat, Build essentials)..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y git rsync curl netcat-openbsd build-essential
+DEBIAN_FRONTEND=noninteractive apt-get install -y git rsync curl netcat-openbsd build-essential nginx
 
 echo "[INFO] Installing Node.js 18..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
@@ -78,6 +83,9 @@ JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
 JWT_REFRESH_EXPIRES_IN=7d
 CORS_ORIGIN=*
+USE_SECRETS_MANAGER=${USE_SECRETS_MANAGER}
+AWS_REGION=${AWS_REGION}
+SECRET_ID=${SECRET_ID}
 EOF
 
 # Install dependencies
@@ -126,6 +134,9 @@ NODE_ENV=production
 MONGO_URI=mongodb://${DB_APP_USER}:${DB_APP_PASSWORD}@${DB_HOST}:27017/${DB_NAME}?authSource=${DB_NAME}
 JWT_SECRET=${JWT_SECRET}
 CORS_ORIGIN=*
+USE_SECRETS_MANAGER=${USE_SECRETS_MANAGER}
+AWS_REGION=${AWS_REGION}
+SECRET_ID=${SECRET_ID}
 EOF
 
 # Install dependencies
@@ -209,8 +220,11 @@ done
 
 echo "[INFO] Database port is open. Seeding database..."
 cd "$TEMP_BUILD_DIR/shared-resources/database"
-npm install mongoose bcryptjs dotenv
+npm install mongoose bcryptjs dotenv @aws-sdk/client-secrets-manager
 export MONGO_URI="mongodb://${DB_APP_USER}:${DB_APP_PASSWORD}@${DB_HOST}:27017/${DB_NAME}?authSource=${DB_NAME}"
+export USE_SECRETS_MANAGER="${USE_SECRETS_MANAGER}"
+export AWS_REGION="${AWS_REGION}"
+export SECRET_ID="${SECRET_ID}"
 node seed-data.js
 
 # ── 10. Verification ─────────────────────────────────────────────────────────
