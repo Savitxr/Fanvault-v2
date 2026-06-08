@@ -13,10 +13,34 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt   = require('bcryptjs');
 
-const MONGO_URI = process.env.MONGO_URI;
-if (!MONGO_URI) {
-  console.error('[seed] FATAL: MONGO_URI is not set.');
-  process.exit(1);
+const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
+
+async function getMongoURI() {
+  let uri = process.env.MONGO_URI;
+  const useSecretsManager = process.env.USE_SECRETS_MANAGER === 'true';
+
+  if (useSecretsManager) {
+    const client = new SecretsManagerClient({
+      region: process.env.AWS_REGION || "us-east-1"
+    });
+    const secretId = process.env.SECRET_ID || "production/mongodb";
+    console.log(`[seed] Fetching database secret '${secretId}' from AWS Secrets Manager...`);
+    try {
+      const response = await client.send(
+        new GetSecretValueCommand({ SecretId: secretId })
+      );
+      const secret = JSON.parse(response.SecretString);
+      const authSource = secret.authSource || secret.database || "admin";
+      uri = `mongodb://${secret.username}:${secret.password}@${secret.host}:${secret.port}/${secret.database}?authSource=${authSource}`;
+      console.log(`[seed] Database URI constructed dynamically from secret.`);
+    } catch (err) {
+      console.error('[seed] Error retrieving secrets from Secrets Manager:', err.message);
+      if (!uri) {
+        throw new Error('Database connection string not configured and Secrets Manager retrieval failed.');
+      }
+    }
+  }
+  return uri;
 }
 
 // ── Inline schemas (mirror the service models exactly) ────────────────────────
@@ -62,7 +86,12 @@ const Product = mongoose.model('Product', new mongoose.Schema({
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 async function seed() {
-  await mongoose.connect(MONGO_URI);
+  const mongoURI = await getMongoURI();
+  if (!mongoURI) {
+    console.error('[seed] FATAL: MONGO_URI is not set and could not be loaded.');
+    process.exit(1);
+  }
+  await mongoose.connect(mongoURI);
   console.log('[seed] Connected to MongoDB');
 
   // ── 1. Auth Users ────────────────────────────────────────────────────────
@@ -135,7 +164,7 @@ async function seed() {
       franchise:    'Mumbai Indians',
       franchiseType:'sports',
       tags:         ['ipl', 'cricket', 'jersey', 'mumbai'],
-      images:       [],
+      images:       ['/api/products/images/mi-jersey-2024.jpg'],
       sku:          'MI-JERSEY-2024-S',
       stock:        120,
       sizes:        ['S', 'M', 'L', 'XL', 'XXL'],
@@ -152,7 +181,7 @@ async function seed() {
       franchise:    'Royal Challengers Bangalore',
       franchiseType:'sports',
       tags:         ['rcb', 'cap', 'cricket', 'ipl'],
-      images:       [],
+      images:       ['/api/products/images/rcb-cap-classic.jpg'],
       sku:          'RCB-CAP-CLS-001',
       stock:        75,
       sizes:        ['Free Size'],
@@ -169,7 +198,7 @@ async function seed() {
       franchise:    'Marvel Avengers',
       franchiseType:'movie',
       tags:         ['marvel', 'avengers', 'hoodie', 'superhero'],
-      images:       [],
+      images:       ['/api/products/images/avengers-infinity-hoodie.jpg'],
       sku:          'MARVEL-AVNG-HOOD-M',
       stock:        45,
       sizes:        ['S', 'M', 'L', 'XL'],
@@ -186,7 +215,7 @@ async function seed() {
       franchise:    'Breaking Bad',
       franchiseType:'show',
       tags:         ['breaking-bad', 'heisenberg', 'tshirt', 'series'],
-      images:       [],
+      images:       ['/api/products/images/breaking-bad-heisenberg-tee.jpg'],
       sku:          'BB-HSNBG-TEE-L',
       stock:        60,
       sizes:        ['S', 'M', 'L', 'XL', 'XXL'],
@@ -203,7 +232,7 @@ async function seed() {
       franchise:    'Chelsea FC',
       franchiseType:'sports',
       tags:         ['chelsea', 'football', 'soccer', 'sneakers', 'premier-league'],
-      images:       [],
+      images:       ['/api/products/images/chelsea-fc-sneakers.jpg'],
       sku:          'CFC-SNKR-BLU-42',
       stock:        30,
       sizes:        ['UK7', 'UK8', 'UK9', 'UK10', 'UK11'],

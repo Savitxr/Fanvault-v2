@@ -52,22 +52,15 @@ app.use((err, req, res, next) => {
 
 // ── Database Connection & Server Startup ─────────────────────────────────────
 const PORT = process.env.PORT || 3001;
-const MONGO_URI = process.env.MONGO_URI;
+const { connectDB } = require('./config/db');
 
-if (!MONGO_URI) {
-  console.error('[user-auth-service] FATAL: MONGO_URI environment variable is not set.');
-  process.exit(1);
-}
-
-mongoose
-  .connect(MONGO_URI)
+connectDB()
   .then(() => {
-    console.log('[user-auth-service] Connected to MongoDB');
     app.listen(PORT, () =>
       console.log(`[user-auth-service] Running on port ${PORT}`)
     );
   })
   .catch((err) => {
-    console.error('[user-auth-service] MongoDB connection error:', err.message);
+    console.error('[user-auth-service] Startup error:', err.message);
     process.exit(1);
   });
