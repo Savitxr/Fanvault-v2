@@ -122,7 +122,7 @@ export default function HomePage() {
             <div className="loading-screen"><div className="spinner" /><span>Loading products...</span></div>
           ) : (
             <div className="product-grid">
-              {featured.map((p) => <ProductCard key={p._id} product={p} />)}
+              {featured.map((p) => <ProductCard key={p.productId} product={p} />)}
             </div>
           )}
         </div>

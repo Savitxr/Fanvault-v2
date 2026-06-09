@@ -49,7 +49,7 @@ function AppRoutes() {
         <Route index                    element={<AdminDashboard />} />
         <Route path="products"          element={<AdminProducts />} />
         <Route path="products/new"      element={<AdminProductForm />} />
-        <Route path="products/:id/edit" element={<AdminProductForm />} />
+        <Route path="products/:productId/edit" element={<AdminProductForm />} />
         <Route path="inventory"         element={<AdminInventory />} />
         <Route path="categories"        element={<AdminCategories />} />
         <Route path="orders"            element={<AdminOrders />} />
@@ -66,7 +66,7 @@ function AppRoutes() {
               <Route path="/login"       element={<GuestRoute><LoginPage /></GuestRoute>} />
               <Route path="/register"    element={<GuestRoute><RegisterPage /></GuestRoute>} />
               <Route path="/products"    element={<ProductsPage />} />
-              <Route path="/products/:id" element={<ProductDetailPage />} />
+              <Route path="/products/:productId" element={<ProductDetailPage />} />
               <Route path="/cart"        element={<CartPage />} />
               <Route path="/checkout"    element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
               <Route path="/orders"      element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />

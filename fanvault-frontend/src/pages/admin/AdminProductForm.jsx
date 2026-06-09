@@ -14,8 +14,8 @@ const EMPTY = {
 };
 
 export default function AdminProductForm() {
-  const { id }      = useParams();
-  const isEdit      = !!id;
+  const { productId } = useParams();
+  const isEdit      = !!productId;
   const navigate    = useNavigate();
   const fileRef     = useRef();
   const [form, setForm]         = useState(EMPTY);
@@ -25,7 +25,7 @@ export default function AdminProductForm() {
 
   useEffect(() => {
     if (!isEdit) return;
-    adminAPI.getProduct(id)
+    adminAPI.getProduct(productId)
       .then(({ data }) => {
         const p = data.product;
         setForm({
@@ -46,7 +46,7 @@ export default function AdminProductForm() {
       })
       .catch(() => toast.error('Failed to load product'))
       .finally(() => setLoading(false));
-  }, [id, isEdit]);
+  }, [productId, isEdit]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -108,7 +108,7 @@ export default function AdminProductForm() {
         images:        form.images,
       };
       if (isEdit) {
-        await adminAPI.updateProduct(id, payload);
+        await adminAPI.updateProduct(productId, payload);
         toast.success('Product updated');
       } else {
         await adminAPI.createProduct(payload);

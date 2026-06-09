@@ -16,7 +16,7 @@ export function CartProvider({ children }) {
 
   const addItem = (product, quantity = 1, size = null, color = null) => {
     setItems((prev) => {
-      const key = `${product._id}-${size}-${color}`;
+      const key = `${product.productId}-${size}-${color}`;
       const existing = prev.find((i) => `${i.productId}-${i.size}-${i.color}` === key);
       if (existing) {
         toast.success('Quantity updated');
@@ -28,7 +28,7 @@ export function CartProvider({ children }) {
       }
       toast.success('Added to cart!');
       return [...prev, {
-        productId: product._id,
+        productId: product.productId,
         name: product.name,
         price: product.price,
         image: product.images?.[0] || '',

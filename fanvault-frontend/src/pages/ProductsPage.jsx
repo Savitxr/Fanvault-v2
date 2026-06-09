@@ -175,7 +175,7 @@ export default function ProductsPage() {
             ) : (
               <>
                 <div className="product-grid">
-                  {products.map((p) => <ProductCard key={p._id} product={p} />)}
+                  {products.map((p) => <ProductCard key={p.productId} product={p} />)}
                 </div>
 
                 {/* Pagination */}

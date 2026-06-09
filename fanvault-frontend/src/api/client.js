@@ -58,10 +58,10 @@ export const userAPI = {
 // ── Products ──────────────────────────────────────
 export const productAPI = {
   getProducts: (params) => api.get('/api/products', { params }),
-  getProduct: (id) => api.get(`/api/products/${id}`),
+  getProduct: (productId) => api.get(`/api/products/${productId}`),
   createProduct: (data) => api.post('/api/products', data),
-  updateProduct: (id, data) => api.patch(`/api/products/${id}`, data),
-  deleteProduct: (id) => api.delete(`/api/products/${id}`),
+  updateProduct: (productId, data) => api.patch(`/api/products/${productId}`, data),
+  deleteProduct: (productId) => api.delete(`/api/products/${productId}`),
 };
 
 // ── Orders ────────────────────────────────────────
@@ -89,10 +89,10 @@ export const adminAPI = {
   // Product management (reuse existing product endpoints)
   getUploadUrl:      (params) => api.get('/api/products/upload-url', { params }),
   createProduct:     (data)   => api.post('/api/products', data),
-  updateProduct:     (id, d)  => api.patch(`/api/products/${id}`, d),
-  deleteProduct:     (id)     => api.delete(`/api/products/${id}`),
+  updateProduct:     (productId, d)  => api.patch(`/api/products/${productId}`, d),
+  deleteProduct:     (productId)     => api.delete(`/api/products/${productId}`),
   getProducts:       (params) => api.get('/api/products', { params }),
-  getProduct:        (id)     => api.get(`/api/products/${id}`),
+  getProduct:        (productId)     => api.get(`/api/products/${productId}`),
   // Order management
   getAllOrders:       (params) => api.get('/api/orders', { params }),
   updateOrderStatus: (id, d)  => api.patch(`/api/orders/${id}/status`, d),

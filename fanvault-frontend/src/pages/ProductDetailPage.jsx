@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import './ProductDetailPage.css';
 
 export default function ProductDetailPage() {
-  const { id } = useParams();
+  const { productId } = useParams();
   const navigate = useNavigate();
   const { addItem } = useCart();
   const { user } = useAuth();
@@ -19,7 +19,7 @@ export default function ProductDetailPage() {
   const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
-    productAPI.getProduct(id)
+    productAPI.getProduct(productId)
       .then(({ data }) => {
         setProduct(data.product);
         if (data.product.sizes?.length > 0) setSelectedSize(data.product.sizes[0]);
@@ -27,7 +27,7 @@ export default function ProductDetailPage() {
       })
       .catch(() => navigate('/products'))
       .finally(() => setLoading(false));
-  }, [id, navigate]);
+  }, [productId, navigate]);
 
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
   if (!product) return null;

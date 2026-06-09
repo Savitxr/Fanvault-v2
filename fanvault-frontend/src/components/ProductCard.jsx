@@ -17,7 +17,7 @@ export default function ProductCard({ product }) {
 
   return (
     <div className="product-card">
-      <Link to={`/products/${product._id}`} className="product-image-link">
+      <Link to={`/products/${product.productId}`} className="product-image-link">
         <div className="product-image-wrapper">
           <img
             src={product.images?.[0] || 'https://placehold.co/400x400/f4fdf6/2d6a4f?text=No+Image'}
@@ -39,7 +39,7 @@ export default function ProductCard({ product }) {
           <span className={`badge ${franchiseTypeColor}`}>{product.franchiseType}</span>
           <span className="product-franchise">{product.franchise}</span>
         </div>
-        <Link to={`/products/${product._id}`}>
+        <Link to={`/products/${product.productId}`}>
           <h3 className="product-name">{product.name}</h3>
         </Link>
 
