@@ -4,6 +4,15 @@ import { CartProvider } from './context/CartContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import AdminRoute from './components/AdminRoute';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminProducts from './pages/admin/AdminProducts';
+import AdminProductForm from './pages/admin/AdminProductForm';
+import AdminInventory from './pages/admin/AdminInventory';
+import AdminCategories from './pages/admin/AdminCategories';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminAudit from './pages/admin/AdminAudit';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -31,25 +40,45 @@ function GuestRoute({ children }) {
 
 function AppRoutes() {
   return (
-    <>
-      <Navbar />
-      <main>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
-          <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
-          <Route path="/products" element={<ProductsPage />} />
-          <Route path="/products/:id" element={<ProductDetailPage />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
-          <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
-          <Route path="/orders/:id" element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-      <Footer />
-    </>
+    <Routes>
+      {/* ── Admin Portal (no Navbar/Footer) ─────────────────────────── */}
+      <Route
+        path="/admin"
+        element={<AdminRoute><AdminLayout /></AdminRoute>}
+      >
+        <Route index                    element={<AdminDashboard />} />
+        <Route path="products"          element={<AdminProducts />} />
+        <Route path="products/new"      element={<AdminProductForm />} />
+        <Route path="products/:id/edit" element={<AdminProductForm />} />
+        <Route path="inventory"         element={<AdminInventory />} />
+        <Route path="categories"        element={<AdminCategories />} />
+        <Route path="orders"            element={<AdminOrders />} />
+        <Route path="audit"             element={<AdminAudit />} />
+      </Route>
+
+      {/* ── Public / User routes (with Navbar/Footer) ───────────────── */}
+      <Route path="/*" element={
+        <>
+          <Navbar />
+          <main>
+            <Routes>
+              <Route path="/"            element={<HomePage />} />
+              <Route path="/login"       element={<GuestRoute><LoginPage /></GuestRoute>} />
+              <Route path="/register"    element={<GuestRoute><RegisterPage /></GuestRoute>} />
+              <Route path="/products"    element={<ProductsPage />} />
+              <Route path="/products/:id" element={<ProductDetailPage />} />
+              <Route path="/cart"        element={<CartPage />} />
+              <Route path="/checkout"    element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+              <Route path="/orders"      element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
+              <Route path="/orders/:id"  element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
+              <Route path="/profile"     element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+              <Route path="*"            element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+          <Footer />
+        </>
+      } />
+    </Routes>
   );
 }
 

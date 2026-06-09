@@ -74,3 +74,26 @@ export const orderAPI = {
   getAllOrders: (params) => api.get('/api/orders', { params }),
   updateOrderStatus: (id, data) => api.patch(`/api/orders/${id}/status`, data),
 };
+
+// ── Admin ──────────────────────────────────────────
+export const adminAPI = {
+  // Audit logs
+  getAuditLogs:      (params) => api.get('/api/admin/audit-logs', { params }),
+  // Inventory
+  getInventory:      (params) => api.get('/api/admin/inventory', { params }),
+  updateStock:       (id, d)  => api.patch(`/api/admin/inventory/${id}`, d),
+  // Metadata
+  getMetadata:       (type)   => api.get(`/api/admin/metadata/${type}`),
+  upsertMetadata:    (type,d) => api.post(`/api/admin/metadata/${type}`, d),
+  deleteMetadata:    (type,id)=> api.delete(`/api/admin/metadata/${type}/${id}`),
+  // Product management (reuse existing product endpoints)
+  getUploadUrl:      (params) => api.get('/api/products/upload-url', { params }),
+  createProduct:     (data)   => api.post('/api/products', data),
+  updateProduct:     (id, d)  => api.patch(`/api/products/${id}`, d),
+  deleteProduct:     (id)     => api.delete(`/api/products/${id}`),
+  getProducts:       (params) => api.get('/api/products', { params }),
+  getProduct:        (id)     => api.get(`/api/products/${id}`),
+  // Order management
+  getAllOrders:       (params) => api.get('/api/orders', { params }),
+  updateOrderStatus: (id, d)  => api.patch(`/api/orders/${id}/status`, d),
+};

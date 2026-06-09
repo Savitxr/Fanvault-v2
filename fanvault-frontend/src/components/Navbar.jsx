@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, Zap, LogOut, Package, ChevronDown } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Zap, LogOut, Package, ChevronDown, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import toast from 'react-hot-toast';
@@ -74,6 +74,16 @@ export default function Navbar() {
                     <Link to="/orders" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
                       <Package size={15} /> My Orders
                     </Link>
+                    {user.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        className="dropdown-item"
+                        onClick={() => setDropdownOpen(false)}
+                        style={{ color: 'var(--brand)', fontWeight: 600 }}
+                      >
+                        <Shield size={15} /> Admin Portal
+                      </Link>
+                    )}
                     <div className="divider" style={{ margin: '8px 0' }} />
                     <button className="dropdown-item danger" onClick={handleLogout}>
                       <LogOut size={15} /> Sign Out

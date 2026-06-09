@@ -9,6 +9,7 @@ const {
   deleteProduct,
   getProductsBulk,
   getProductImage,
+  getUploadUrl,
 } = require('../controllers/product.controller');
 
 const router = express.Router();
@@ -28,10 +29,13 @@ const productValidation = [
   body('stock').isInt({ min: 0 }).withMessage('Stock must be a non-negative integer'),
 ];
 
+// ── Admin-only route registered before dynamic id route ───────────────────────
+router.get('/upload-url', authenticate, adminOnly, getUploadUrl);
+
 // ── Public routes ─────────────────────────────────────────────────────────────
 router.get('/',      getProducts);
 router.get('/bulk',  getProductsBulk);
-router.get('/images/:key', getProductImage);
+router.get('/images/:key(*)', getProductImage);
 router.get('/:id',   getProduct);
 
 // ── Admin-only routes ─────────────────────────────────────────────────────────
