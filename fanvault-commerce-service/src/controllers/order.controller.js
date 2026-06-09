@@ -1,5 +1,7 @@
 const { validationResult } = require('express-validator');
 const OrderRepository = require('../models/Order');
+const ProductRepository = require('../models/Product');
+const { publishEvent } = require('../utils/eventPublisher');
 
 // ── Internal: log order event locally (email service omitted) ────────────────
 const logOrderEvent = (eventType, order) => {
@@ -44,6 +46,42 @@ exports.createOrder = async (req, res) => {
     });
 
     logOrderEvent('ORDER_PLACED', order);
+
+    // Publish OrderPlaced domain event
+    publishEvent('OrderPlaced', {
+      orderId: order.orderId,
+      orderNumber: order.orderNumber,
+      userId: order.userId,
+      userEmail: order.userEmail,
+      total: order.total,
+      items: order.items,
+      timestamp: order.createdAt
+    });
+
+    // Update product stock and check for low stock
+    for (const item of items) {
+      try {
+        const product = await ProductRepository.findById(item.productId);
+        if (product) {
+          const newStock = Math.max(0, Number(product.stock || 0) - Number(item.quantity));
+          await ProductRepository.update(item.productId, { stock: newStock });
+          console.log(`[order] Decremented stock for product ${item.productId}. Old: ${product.stock}, New: ${newStock}`);
+          
+          if (newStock <= 5) {
+            publishEvent('InventoryLow', {
+              productId: item.productId,
+              name: product.name,
+              sku: product.sku,
+              stock: newStock,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      } catch (updateErr) {
+        console.error(`[order] Failed to update stock for item ${item.productId}:`, updateErr.message);
+      }
+    }
+
     res.status(201).json({ message: 'Order placed successfully', order });
   } catch (err) {
     console.error('[order] createOrder error:', err.message);

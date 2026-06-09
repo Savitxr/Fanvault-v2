@@ -3,6 +3,7 @@ const AuditLogRepository  = require('../models/AuditLog');
 const MetadataRepository  = require('../models/Metadata');
 const ProductRepository   = require('../models/Product');
 const { logAuditEvent }   = require('../utils/auditLogger');
+const { publishEvent } = require('../utils/eventPublisher');
 const {
   UpdateCommand,
 } = require('@aws-sdk/lib-dynamodb');
@@ -104,6 +105,24 @@ exports.updateStock = async (req, res) => {
       entityId:   productId,
       changes:    { stock: Number(stock) },
     });
+
+    // Publish ProductUpdated and InventoryLow events
+    publishEvent('ProductUpdated', {
+      productId,
+      changes: { stock: Number(stock) },
+      timestamp: new Date().toISOString()
+    });
+
+    if (Number(stock) <= 5) {
+      const product = result.Attributes;
+      publishEvent('InventoryLow', {
+        productId,
+        name: product.name,
+        sku: product.sku,
+        stock: Number(stock),
+        timestamp: new Date().toISOString()
+      });
+    }
 
     res.json({ message: 'Stock updated', product: result.Attributes });
   } catch (err) {

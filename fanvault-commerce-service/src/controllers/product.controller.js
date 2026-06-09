@@ -5,6 +5,7 @@ const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/clien
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { v4: uuidv4 } = require('uuid');
 const { logAuditEvent } = require('../utils/auditLogger');
+const { publishEvent } = require('../utils/eventPublisher');
 
 const ssm = new SSMClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
@@ -172,6 +173,33 @@ exports.createProduct = async (req, res) => {
 
     const product = await ProductRepository.create(req.body);
     logAuditEvent({ adminId: req.user.id, adminEmail: req.user.email, action: 'PRODUCT_CREATED', entityType: 'product', entityId: product.productId, changes: { name: product.name, sku: product.sku } });
+    
+    // Publish ProductCreated domain event
+    publishEvent('ProductCreated', {
+      productId: product.productId,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      comparePrice: product.comparePrice,
+      category: product.category,
+      franchise: product.franchise,
+      franchiseType: product.franchiseType,
+      sku: product.sku,
+      stock: product.stock,
+      images: product.images,
+      timestamp: product.createdAt
+    });
+
+    if (product.stock <= 5) {
+      publishEvent('InventoryLow', {
+        productId: product.productId,
+        name: product.name,
+        sku: product.sku,
+        stock: product.stock,
+        timestamp: product.createdAt
+      });
+    }
+
     res.status(201).json({ message: 'Product created', product: formatProductImageUrls(product, cloudfrontUrl) });
   } catch (err) {
     if (err.code === 'SKU_CONFLICT')
@@ -194,6 +222,24 @@ exports.updateProduct = async (req, res) => {
     const product = await ProductRepository.update(req.params.productId, req.body);
     if (!product) return res.status(404).json({ error: 'Product not found' });
     logAuditEvent({ adminId: req.user.id, adminEmail: req.user.email, action: 'PRODUCT_UPDATED', entityType: 'product', entityId: req.params.productId, changes: req.body });
+    
+    // Publish ProductUpdated domain event
+    publishEvent('ProductUpdated', {
+      productId: product.productId,
+      changes: req.body,
+      timestamp: new Date().toISOString()
+    });
+
+    if (product.stock !== undefined && product.stock <= 5) {
+      publishEvent('InventoryLow', {
+        productId: product.productId,
+        name: product.name,
+        sku: product.sku,
+        stock: product.stock,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     res.json({ message: 'Product updated', product: formatProductImageUrls(product, cloudfrontUrl) });
   } catch (err) {
     if (err.name === 'ConditionalCheckFailedException')
